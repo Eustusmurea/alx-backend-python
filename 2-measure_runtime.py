@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 
 import asyncio
-import random
 import time
-
-async def wait_n(n: int, max_delay: int) -> list:
-    delays = []
-    tasks = [wait_random(max_delay) for _ in range(n)]
-    for task in asyncio.as_completed(tasks):
-        delay = await task
-        delays.append(delay)
-    return delays
+from basic_async_syntax import wait_n
 
 async def measure_time(n: int, max_delay: int) -> float:
-    start = time.time()
+    start_time = time.time()
     await wait_n(n, max_delay)
-    end = time.time()
-    total_time = end - start/n
-    return total_time
+    end_time = time.time()
+    total_time = end_time - start_time
+    return total_time / n
+
+# Example usage:
+async def main():
+    n = 5  # Number of times to spawn wait_random
+    max_delay = 10  # Maximum delay
+    average_time = await measure_time(n, max_delay)
+    print("Average time per iteration:", average_time)
+
+asyncio.run(main())
