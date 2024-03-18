@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
+""" Async basics """
 
-import asyncio
-import random
-import importlib
+from asyncio import Task, create_task
 
-basic_async_syntax = importlib.import_module("0-basic_async_syntax")
+wait_random = __import__('0-basic_async_syntax').wait_random
 
-def task_wait_random(max_delay: int) -> asyncio.Task:
-    return asyncio.create_task(wait_random(max_delay))
 
-# Example usage:
-async def main():
-    max_delay = 10  # Maximum delay
-    task = task_wait_random(max_delay)
-    await task
-    print("Random delay:", task.result())
-
-asyncio.run(main())
+def task_wait_random(max_delay: int) -> Task:
+    """ Tasks """
+    task = create_task(wait_random(max_delay))
+    return task

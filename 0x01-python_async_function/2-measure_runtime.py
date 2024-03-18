@@ -1,24 +1,18 @@
 #!/usr/bin/env python3
+""" The basics of async """
 
-import asyncio
-import time
-import importlib
+from asyncio import run
+from time import time
 
-basic_async_syntax = importlib.import_module("0-basic_async_syntax")
-from basic_async_syntax import wait_n
+wait_n = __import__('1-concurrent_coroutines').wait_n
 
-async def measure_time(n: int, max_delay: int) -> float:
-    start_time = time.time()
-    await wait_n(n, max_delay)
-    end_time = time.time()
-    total_time = end_time - start_time
-    return total_time / n
 
-# Example usage:
-async def main():
-    n = 5  # Number of times to spawn wait_random
-    max_delay = 10  # Maximum delay
-    average_time = await measure_time(n, max_delay)
-    print("Average time per iteration:", average_time)
+def measure_time(n: int, max_delay: int) -> float:
+    """ Measure the runtime """
+    start = time()
 
-asyncio.run(main())
+    run(wait_n(n, max_delay))
+
+    end = time()
+
+    return (end - start) / n
