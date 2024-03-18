@@ -2,6 +2,9 @@
 
 import asyncio
 import time
+import importlib
+
+basic_async_syntax = importlib.import_module("0-basic_async_syntax")
 from basic_async_syntax import wait_n
 
 async def measure_time(n: int, max_delay: int) -> float:
