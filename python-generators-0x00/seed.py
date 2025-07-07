@@ -13,7 +13,7 @@ def read_csv_data(file_path):
     try:
         with open(file_path, mode='r', encoding='utf-8') as file:
             csv_reader = csv.reader(file)
-            next(csv_reader, None)  # Skip header row, if present
+            next(csv_reader, None)
             return [(row[0], row[1], float(row[2])) for row in csv_reader if len(row) >= 3]
     except FileNotFoundError:
         print(f"Error: CSV file '{file_path}' not found.")
