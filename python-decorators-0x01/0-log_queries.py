@@ -1,9 +1,6 @@
 import sqlite3
-import logging
 import functools
-
-# Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from datetime import datetime
 
 def log_queries():
     def decorator(func):
@@ -11,7 +8,7 @@ def log_queries():
         def wrapper(*args, **kwargs):
             if args:
                 query = args[0]
-                logging.info(f"Executing SQL query: {query}")
+                print(f"[{datetime.now()}] Executing SQL query: {query}")
             return func(*args, **kwargs)
         return wrapper
     return decorator
