@@ -31,14 +31,12 @@ class Conversation(models.Model):
 
 
 class Message(models.Model):
-    """
-    Model representing a message in a conversation.
-    """
     message_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='messages')
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
-    content = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
+    message_body = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Message {self.message_id} from {self.sender.username} in Conversation {self.conversation.conversation_id}"
+
