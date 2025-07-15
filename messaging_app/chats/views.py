@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import Conversation, Message
@@ -7,7 +7,6 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-# Create your views here.
 class ConversationViewSet(viewsets.ModelViewSet):
     """
     A viewset for viewing and editing conversation instances.
@@ -15,6 +14,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['participants__username']
 
     def create(self, request, *args, **kwargs):
         """
@@ -22,14 +23,15 @@ class ConversationViewSet(viewsets.ModelViewSet):
         """
         participants = request.data.get('participants', [])
         if not participants:
-            participants = [request.user.user_id]
             return Response({"error": "At least one participant is required."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        Conversation = Conversation.objects.create()
-        Conversation.participants.add(User.objects.filter(user_id__in=participants))
-        serializer = self.get_serializer(Conversation)
+
+        conversation = Conversation.objects.create()
+        conversation.participants.add(*User.objects.filter(user_id__in=participants))
+        conversation.participants.add(request.user)  # Ensure creator is included
+        serializer = self.get_serializer(conversation)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
+
+
 class MessageViewSet(viewsets.ModelViewSet):
     """
     A viewset for viewing and editing message instances.
@@ -37,6 +39,9 @@ class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['message_body']
+    ordering_fields = ['sent_at']
 
     def create(self, request, *args, **kwargs):
         """
@@ -46,7 +51,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         message_body = request.data.get('message_body')
 
         if not conversation_id or not message_body:
-            return Response({"error": "Conversation ID and content are required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Conversation ID and message_body are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         conversation = Conversation.objects.filter(conversation_id=conversation_id).first()
         if not conversation:
@@ -55,7 +60,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         message = Message.objects.create(
             sender=request.user,
             conversation=conversation,
-            content=message_body
+            message_body=message_body
         )
         serializer = self.get_serializer(message)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
