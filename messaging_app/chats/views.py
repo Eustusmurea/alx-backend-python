@@ -20,7 +20,6 @@ class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated, IsParticipant]
     filterset_class = ConversationFilter
-    pagination_class = MessagePagination
     filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter]
     search_fields = ['participants__username']
 
