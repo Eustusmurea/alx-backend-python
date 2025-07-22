@@ -30,8 +30,16 @@ class IsParticipant(permissions.BasePermission):
 class IsSender(permissions.BasePermission):
     """
     Allows only the sender of a message to update or delete it.
+    Allows safe methods (GET, HEAD, OPTIONS) for participants.
     """
 
     def has_object_permission(self, request, view, obj):
-        return hasattr(obj, 'sender') and obj.sender == request.user
-        logger.debug(f"User {request.user} is the sender of message {obj.message_id}")
+        if request.method in permissions.SAFE_METHODS:
+            return True  # Allow read access to participants
+
+        if request.method in ['PUT', 'PATCH', 'DELETE']:
+            is_sender = hasattr(obj, 'sender') and obj.sender == request.user
+            logger.debug(f"Checking if user {request.user} is sender of message {obj}: {is_sender}")
+            return is_sender
+
+        return False
