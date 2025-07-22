@@ -5,6 +5,9 @@ from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
 from django.contrib.auth import get_user_model
 from rest_framework import filters
+from .permissions import IsParticipant, IsSender
+from .filters import MessageFilter
+from .pagination import MessagePagination
 
 
 User = get_user_model()
@@ -15,7 +18,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
     """
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsParticipant]
+    filterset_class = MessageFilter
+    pagination_class = MessagePagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['participants__username']
 
@@ -44,7 +49,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     """
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSender]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['message_body']
     ordering_fields = ['sent_at']
