@@ -10,4 +10,9 @@ class MessageFilter(django_filters.FilterSet):
         model = Message
         fields = ['sent_after', 'sent_before', 'sender']
 
-        
+class ConversationFilter(django_filters.FilterSet):
+    participant = django_filters.CharFilter(field_name='participants__username', lookup_expr='icontains')
+
+    class Meta:
+        model = Message
+        fields = ['participant']        
