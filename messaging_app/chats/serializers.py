@@ -14,14 +14,14 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['message_id', 'sender', 'sender_username', 'conversation', 'message_body', 'sent_at']
+        fields = ['message_id', 'sender', 'sender_username', 'message_body', 'sent_at']
+        read_only_fields = ['message_id', 'sender', 'sender_username', 'sent_at']
 
     def get_sender_username(self, obj):
         return obj.sender.username if obj.sender else None
 
     def validate_message_body(self, value):
         content = value.strip()
-
         if not content:
             raise serializers.ValidationError("Message body cannot be empty.")
         if len(content) < 5:
@@ -33,9 +33,9 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class ConversationSerializer(serializers.ModelSerializer):
     participants = UserSerializer(many=True, read_only=True)
-    Messages = MessageSerializer(many=True, read_only=True)
-    topic = serializers.CharField(default="General", read_only=True)
+    Messages = MessageSerializer(many=True, read_only=True, source='messages')
 
     class Meta:
         model = Conversation
         fields = ['conversation_id', 'participants', 'created_at', 'Messages', 'topic']
+        read_only_fields = ['conversation_id', 'participants', 'created_at', 'Messages']
