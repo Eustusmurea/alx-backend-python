@@ -85,15 +85,20 @@ class RolePermissionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Only apply role check for specific paths, e.g., admin/mod-only views
-        protected_paths = ['/conversations/', '/admin/', '/moderator/'] 
+        # Only enforce for authenticated users
+        if request.user.is_authenticated:
+            # Check for role: admin or moderator
+            role = getattr(request.user, 'role', None)
 
-        if any(request.path.startswith(p) for p in protected_paths):
-            user = request.user
-            if not user.is_authenticated:
-                return HttpResponseForbidden("Authentication required.")
+            # You can also use is_superuser or is_staff if role field doesn't exist
+            if role not in ['admin', 'moderator']:
+                protected_paths = ['/conversations/', '/messages/']
+                if any(request.path.startswith(p) for p in protected_paths):
+                    return HttpResponseForbidden("403 Forbidden: Admin or moderator role required.")
+        else:
+            # Block unauthenticated access to protected paths
+            protected_paths = ['/conversations/', '/messages/']
+            if any(request.path.startswith(p) for p in protected_paths):
+                return HttpResponseForbidden("403 Forbidden: Login required.")
 
-            if not getattr(user, 'role', None) in ['admin', 'moderator']:
-                return HttpResponseForbidden("You do not have permission to access this resource.")
-
-        return self.get_response(request) 
+        return self.get_response(request)
