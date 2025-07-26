@@ -85,18 +85,15 @@ class RolePermissionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Only apply role check to protected paths (adjust as needed)
-        protected_paths = ['/conversations/', '/admin/']
+        # Only apply role check for specific paths, e.g., admin/mod-only views
+        protected_paths = ['/conversations/', '/admin/', '/moderator/'] 
 
         if any(request.path.startswith(p) for p in protected_paths):
-            if not request.user.is_authenticated:
-                return JsonResponse({'error': 'Authentication required'}, status=401)
+            user = request.user
+            if not user.is_authenticated:
+                return HttpResponseForbidden("Authentication required.")
 
-            # Assuming `request.user.role` exists and is a string
-            allowed_roles = ['admin', 'moderator']
-            user_role = getattr(request.user, 'role', None)
+            if not getattr(user, 'role', None) in ['admin', 'moderator']:
+                return HttpResponseForbidden("You do not have permission to access this resource.")
 
-            if user_role not in allowed_roles:
-                return JsonResponse({'error': 'Forbidden: Insufficient role permissions'}, status=403)
-
-        return self.get_response(request)   
+        return self.get_response(request) 
