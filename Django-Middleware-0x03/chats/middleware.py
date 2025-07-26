@@ -80,23 +80,18 @@ class OffensiveLanguageMiddleware:
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
-class RolePermissionMiddleware:
+class RolepermissionMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        # Only enforce for authenticated users
         if request.user.is_authenticated:
-            # Check for role: admin or moderator
             role = getattr(request.user, 'role', None)
-
-            # You can also use is_superuser or is_staff if role field doesn't exist
             if role not in ['admin', 'moderator']:
                 protected_paths = ['/conversations/', '/messages/']
                 if any(request.path.startswith(p) for p in protected_paths):
                     return HttpResponseForbidden("403 Forbidden: Admin or moderator role required.")
         else:
-            # Block unauthenticated access to protected paths
             protected_paths = ['/conversations/', '/messages/']
             if any(request.path.startswith(p) for p in protected_paths):
                 return HttpResponseForbidden("403 Forbidden: Login required.")
