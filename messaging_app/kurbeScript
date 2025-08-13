@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# kurbeScript - Setup and verify a local Kubernetes cluster with Minikube
+
+set -e  # Exit immediately if a command fails
+
+# 1. Check if minikube is installed
+if ! command -v minikube &> /dev/null; then
+    echo "[INFO] Minikube not found. Installing..."
+    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+    sudo install minikube-linux-amd64 /usr/local/bin/minikube
+    rm minikube-linux-amd64
+else
+    echo "[INFO] Minikube is already installed."
+fi
+
+# 2. Check if kubectl is installed
+if ! command -v kubectl &> /dev/null; then
+    echo "[INFO] kubectl not found. Installing..."
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    sudo install kubectl /usr/local/bin/
+    rm kubectl
+else
+    echo "[INFO] kubectl is already installed."
+fi
+
+# 3. Start Minikube (Docker driver is default)
+echo "[INFO] Starting Minikube..."
+minikube start --driver=docker
+
+# 4. Verify Kubernetes cluster info
+echo "[INFO] Verifying cluster..."
+kubectl cluster-info
+
+# 5. Get all available pods in all namespaces
+echo "[INFO] Retrieving available pods..."
+kubectl get pods --all-namespaces
+
+echo "[SUCCESS] Kubernetes cluster is up and running!"

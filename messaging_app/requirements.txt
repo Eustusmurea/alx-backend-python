@@ -1,0 +1,27 @@
+attrs==23.2.0
+Babel==2.10.3
+bcrypt==3.2.2
+# Core Django + DRF
+Django>=5.2,<6.0
+djangorestframework>=3.14,<4.0
+
+# JWT Authentication
+djangorestframework-simplejwt>=5.3,<6.0
+
+# Filtering
+django-filter>=24.1,<25.0
+
+# API documentation
+drf-yasg>=1.21,<2.0
+
+drf-nested-routers>=0.93.3,<1.0
+
+# Environment variable loading (optional, but common)
+python-dotenv>=1.0,<2.0
+
+# SQLite support is built-in, so no need for psycopg2
+# Gunicorn for production server (optional but recommended)
+gunicorn>=21.2,<22.0
+mysqlclient
+python-dotenv
+dj-database-url
