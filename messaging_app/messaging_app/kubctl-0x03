@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# kubctl-0x03 - Rolling update script
+
+set -e
+
+DEPLOYMENT="messaging-app-blue"
+SERVICE="messaging-app-service"
+PORT=8000
+
+echo "[INFO] Applying updated deployment..."
+kubectl apply -f blue_deployment.yaml
+
+echo "[INFO] Starting availability test in background..."
+(
+  while true; do
+    if curl -s http://messaging.local/api/ > /dev/null; then
+      echo "$(date '+%H:%M:%S') - OK"
+    else
+      echo "$(date '+%H:%M:%S') - FAIL"
+    fi
+    sleep 1
+  done
+) &
+CURL_PID=$!
+
+echo "[INFO] Monitoring rollout..."
+kubectl rollout status deployment/"$DEPLOYMENT"
+
+kill $CURL_PID
+
+echo "[INFO] Rolling update complete. Verifying pods..."
+kubectl get pods -l app=messaging-app,version=blue -o wide

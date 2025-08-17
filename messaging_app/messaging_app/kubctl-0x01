@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# kubctl-0x01 - Scale Django app deployment and test performance
+
+set -e  # Exit immediately on error
+
+DEPLOYMENT_NAME="messaging-app-deployment"
+SERVICE_NAME="messaging-app-service"
+PORT=8000
+
+# 1. Scale the Django app to 3 replicas
+echo "[INFO] Scaling $DEPLOYMENT_NAME to 3 replicas..."
+kubectl scale deployment "$DEPLOYMENT_NAME" --replicas=3
+
+# 2. Verify pods
+echo "[INFO] Verifying pods..."
+kubectl get pods -l app=messaging-app
+
+# 3. Port-forward service for load testing
+echo "[INFO] Port-forwarding service on port $PORT..."
+kubectl port-forward svc/"$SERVICE_NAME" "$PORT":"$PORT" &
+PF_PID=$!
+sleep 5  # Wait for port-forward to start
+
+# 4. Load test using wrk (10s, 50 concurrent connections, 200 total requests per connection)
+if ! command -v wrk &> /dev/null; then
+    echo "[INFO] Installing wrk..."
+    sudo apt update -y
+    sudo apt install -y wrk
+fi
+
+echo "[INFO] Running load test..."
+wrk -t4 -c50 -d10s http://localhost:$PORT/ || true
+
+# Stop port-forwarding
+kill $PF_PID
+
+# 5. Monitor resource usage
+if ! kubectl top pods &> /dev/null; then
+    echo "[INFO] Metrics server not found. Installing metrics-server..."
+    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+    echo "[INFO] Waiting for metrics server to be ready..."
+    sleep 30
+fi
+
+echo "[INFO] Resource usage:"
+kubectl top pods
+echo "[INFO] Deployment scaled and performance tested successfully."
