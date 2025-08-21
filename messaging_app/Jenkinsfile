@@ -1,10 +1,15 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'python:3.12-slim'
+            args '-u root:root'  // allows installing system deps if needed
+        }
+    }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main',
+                git branch: 'main', 
                     url: 'https://github.com/Eustusmurea/alx-backend-python.git',
                     credentialsId: '077f0262-c5f7-48ed-bb85-05d198594a77'
             }
@@ -12,34 +17,43 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh 'python3 -m venv venv'
-                sh '. venv/bin/activate && pip install --upgrade pip'
-                sh '. venv/bin/activate && pip install -r messaging_app/requirements.txt'
+                sh '''
+                  python -m venv venv
+                  . venv/bin/activate
+                  pip install --upgrade pip
+                  pip install -r requirements.txt
+                '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh '. venv/bin/activate && pytest messaging_app/tests'
+                sh '''
+                  . venv/bin/activate
+                  pytest --maxfail=1 --disable-warnings -q
+                '''
             }
         }
 
         stage('Lint') {
             steps {
-                sh '. venv/bin/activate && flake8 messaging_app'
+                sh '''
+                  . venv/bin/activate
+                  flake8 .
+                '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t messaging_app:latest -f messaging_app/Dockerfile .'
+                sh 'docker build -t messaging_app:latest .'
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline executed successfully ✅'
+            echo 'Pipeline succeeded ✅'
         }
         failure {
             echo 'Pipeline failed ❌'
