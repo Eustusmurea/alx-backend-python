@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+
+    tools {
+        python 'Python3'  // Needs ShiningPanda plugin to provide Python installations
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', 
+                    url: https://github.com/Eustusmurea/alx-backend-python.git,
+                    credentialsId: '077f0262-c5f7-48ed-bb85-05d198594a77'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                python3 -m venv venv
+                . venv/bin/activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
+                '''
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh '''
+                . venv/bin/activate
+                pytest --junitxml=report.xml
+                '''
+            }
+            post {
+                always {
+                    junit 'report.xml'
+                }
+            }
+        }
+    }
+
+    triggers {
+        // Disable auto triggers since you want manual runs
+        // To run manually, just click "Build Now" in Jenkins
+    }
+}
