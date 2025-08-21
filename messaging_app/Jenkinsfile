@@ -2,13 +2,14 @@ pipeline {
     agent any
 
     tools {
-        python 'Python3'  // Needs ShiningPanda plugin to provide Python installations
+        // Use the Python installation you configured in "Global Tool Configuration"
+        python 'Python3'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', 
+                git branch: 'main',
                     url: 'https://github.com/Eustusmurea/alx-backend-python.git',
                     credentialsId: '077f0262-c5f7-48ed-bb85-05d198594a77'
             }
@@ -16,36 +17,37 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                dir('messaging_app') {
-                    sh '''
-                    python3 -m venv venv
-                    . venv/bin/activate
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-                    '''
-                }
+                sh 'python3 -m venv venv'
+                sh '. venv/bin/activate && pip install --upgrade pip'
+                sh '. venv/bin/activate && pip install -r messaging_app/requirements.txt'
             }
         }
 
         stage('Run Tests') {
             steps {
-                dir('messaging_app') {
-                    sh '''
-                    . venv/bin/activate
-                    pytest --junitxml=report.xml --html=report.html --self-contained-html
-                    '''
-                }
+                sh '. venv/bin/activate && pytest messaging_app/tests'
             }
-            post {
-                always {
-                    junit 'messaging_app/report.xml'
-                    archiveArtifacts artifacts: 'messaging_app/report.html', fingerprint: true
-                }
+        }
+
+        stage('Lint') {
+            steps {
+                sh '. venv/bin/activate && flake8 messaging_app'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t messaging_app:latest -f messaging_app/Dockerfile .'
             }
         }
     }
 
-    triggers {
-        // No auto triggers -> you will run manually with "Build Now"
+    post {
+        success {
+            echo 'Pipeline executed successfully ✅'
+        }
+        failure {
+            echo 'Pipeline failed ❌'
+        }
     }
 }
