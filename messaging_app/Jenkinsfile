@@ -18,10 +18,11 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                  python -m venv venv
-                  . venv/bin/activate
-                  pip install --upgrade pip
-                  pip install -r requirements.txt
+                apt-get update && apt-get install -y python3-venv python3-dev build-essential
+                python -m venv venv
+                . venv/bin/activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
                 '''
             }
         }
