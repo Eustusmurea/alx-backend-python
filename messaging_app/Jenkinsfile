@@ -17,16 +17,24 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh '''
-                cd messaging_app
-                apt-get update && apt-get install -y python3-venv python3-dev build-essential
-                python -m venv venv
-                . venv/bin/activate
-                pip install --upgrade pip
-                pip install -r requirements.txt
-                '''
+                dir('messaging_app') {
+                    sh '''
+                    apt-get update && apt-get install -y \
+                    gcc \
+                    pkg-config \
+                    default-libmysqlclient-dev \
+                    python3-dev \
+                    build-essential
+
+                    python -m venv venv
+                    . venv/bin/activate
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                    '''
+                }
             }
         }
+ 
 
 
         stage('Run Tests') {
