@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     tools {
-        // Use the Python installation you configured in "Global Tool Configuration"
-        python 'Python3'
+    jenkins.plugins.shiningpanda.tools.PythonInstallation 'Python3'
     }
+
 
     stages {
         stage('Checkout') {
