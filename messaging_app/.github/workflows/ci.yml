@@ -1,0 +1,82 @@
+name: Django CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpass
+          MYSQL_DATABASE: messaging_db
+          MYSQL_USER: messaging_user
+          MYSQL_PASSWORD: messaging_pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pmessaging_pass"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DEBUG: "False"
+      DJANGO_SECRET_KEY: githubactionssecret
+      DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost
+      MYSQL_DB: messaging_db
+      MYSQL_USER: messaging_user
+      MYSQL_PASSWORD: messaging_pass
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc pkg-config default-libmysqlclient-dev python3-dev build-essential
+
+      - name: Install dependencies
+        run: |
+          cd messaging_app
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 pytest pytest-cov
+
+      - name: Run Linter (fail on error)
+        run: |
+          cd messaging_app
+          source venv/bin/activate
+          flake8 messaging_app chats manage.py
+
+      - name: Run Tests with Coverage
+        run: |
+          cd messaging_app
+          source venv/bin/activate
+          python manage.py migrate
+          pytest --cov=messaging_app --cov=chats --cov-report=xml --cov-report=html
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            messaging_app/htmlcov
+            messaging_app/coverage.xml
