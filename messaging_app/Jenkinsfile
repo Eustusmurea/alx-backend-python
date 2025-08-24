@@ -2,14 +2,43 @@ pipeline {
     agent {
         docker {
             image 'python:3.12-slim'
-            args '-u root:root'  // allows installing system deps if needed
+            args '-u root:root'
+        }
+    }
+
+    environment {
+        DOCKERHUB_CREDENTIALS = 'dockerhub-creds'  // Jenkins credentials ID
+        DOCKER_REPO = 'your-dockerhub-username/messaging_app'
+        COMMIT_SHA = "${env.GIT_COMMIT ?: 'dev'}"
+        BUILD_TAG = "${env.BUILD_NUMBER ?: 'local'}"
+
+        # Django test DB envs
+        DB_NAME = "testdb"
+        DB_USER = "testuser"
+        DB_PASS = "testpass"
+        DB_HOST = "mysql"
+        DB_PORT = "3306"
+        DJANGO_SETTINGS_MODULE = "messaging_app.settings"
+    }
+
+    services {
+        mysql {
+            image 'mysql:8.0'
+            env {
+                MYSQL_DATABASE = "${env.DB_NAME}"
+                MYSQL_USER = "${env.DB_USER}"
+                MYSQL_PASSWORD = "${env.DB_PASS}"
+                MYSQL_ROOT_PASSWORD = "rootpass"
+            }
+            ports = ['3306:3306']
+            options = '--health-cmd="mysqladmin ping -h localhost -uroot -prootpass" --health-interval=10s --health-timeout=5s --health-retries=5'
         }
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', 
+                git branch: 'main',
                     url: 'https://github.com/Eustusmurea/alx-backend-python.git',
                     credentialsId: '077f0262-c5f7-48ed-bb85-05d198594a77'
             }
@@ -19,41 +48,52 @@ pipeline {
             steps {
                 dir('messaging_app') {
                     sh '''
-                    apt-get update && apt-get install -y \
-                    gcc \
-                    pkg-config \
-                    default-libmysqlclient-dev \
-                    python3-dev \
-                    build-essential
+                        apt-get update && apt-get install -y \
+                            gcc \
+                            pkg-config \
+                            default-libmysqlclient-dev \
+                            python3-dev \
+                            build-essential \
+                        && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-                    python -m venv venv
-                    . venv/bin/activate
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-                    pip install flake8 pytest
+                        python -m venv venv
+                        . venv/bin/activate
+                        pip install --upgrade pip
+                        pip install -r requirements.txt
+                        pip install flake8 pytest
                     '''
                 }
             }
         }
- 
-
-
-        // stage('Run Tests') {
-        //     steps {
-        //         sh '''
-        //           . venv/bin/activate
-        //           pytest --maxfail=1 --disable-warnings -q
-        //         '''
-        //     }
-        // }
 
         stage('Lint') {
             steps {
                 dir('messaging_app') {
                     sh '''
-                    . venv/bin/activate
-                    # Run flake8 but don't fail the pipeline on errors
-                    flake8 messaging_app chats manage.py --exit-zero
+                        . venv/bin/activate
+                        flake8 messaging_app chats manage.py --exit-zero
+                    '''
+                }
+            }
+        }
+
+        stage('Run Migrations') {
+            steps {
+                dir('messaging_app') {
+                    sh '''
+                        . venv/bin/activate
+                        python manage.py migrate --noinput
+                    '''
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                dir('messaging_app') {
+                    sh '''
+                        . venv/bin/activate
+                        pytest --maxfail=1 --disable-warnings --junitxml=../report.xml
                     '''
                 }
             }
@@ -61,17 +101,39 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t messaging_app:latest .'
+                sh """
+                    docker build -t $DOCKER_REPO:latest \
+                                 -t $DOCKER_REPO:${COMMIT_SHA} \
+                                 -t $DOCKER_REPO:build-${BUILD_TAG} .
+                """
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push $DOCKER_REPO:latest
+                        docker push $DOCKER_REPO:${COMMIT_SHA}
+                        docker push $DOCKER_REPO:build-${BUILD_TAG}
+                        docker logout
+                    '''
+                }
             }
         }
     }
 
     post {
+        always {
+            junit 'report.xml'
+            cleanWs()
+        }
         success {
-            echo 'Pipeline succeeded ✅'
+            echo "✅ Pipeline succeeded — image pushed as latest, ${COMMIT_SHA}, and build-${BUILD_TAG}"
         }
         failure {
-            echo 'Pipeline failed ❌'
+            echo "❌ Pipeline failed"
         }
     }
 }
